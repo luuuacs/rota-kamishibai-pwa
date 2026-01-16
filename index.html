@@ -17,67 +17,19 @@ if ('serviceWorker' in navigator) {
 <script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
 
 <style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f4f4;
-  margin: 0;
-  padding: 15px;
-}
-
-h2 {
-  margin-top: 0;
-}
-
-.section {
-  background: white;
-  padding: 15px;
-  margin-bottom: 15px;
-  border-radius: 8px;
-}
-
-button {
-  padding: 10px;
-  margin: 5px 3px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.btn-group button {
-  background: #ddd;
-}
-
-.btn-group button.active {
-  outline: 3px solid black;
-}
-
+* { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 15px; }
+h2 { margin-top: 0; }
+.section { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+button { padding: 10px; margin: 5px 3px; border: none; border-radius: 5px; cursor: pointer; }
+.btn-group button { background: #ddd; }
+.btn-group button.active { outline: 3px solid black; }
 .status-ok { background: #3ec303 !important; color: white; }
 .status-nok { background: #DC2828 !important; color: white; }
 .status-att { background: #f4bb31 !important; color: white; }
-
-input, textarea {
-  width: 100%;
-  padding: 8px;
-  margin-top: 5px;
-  margin-bottom: 10px;
-}
-
-.add-btn {
-  width: 100%;
-  background: #333;
-  color: white;
-}
-
-.finish-btn {
-  width: 100%;
-  background: #000;
-  color: white;
-  font-size: 18px;
-}
+input, textarea { width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px; }
+.add-btn { width: 100%; background: #333; color: white; }
+.finish-btn { width: 100%; background: #000; color: white; font-size: 18px; }
 </style>
 </head>
 
@@ -107,103 +59,6 @@ input, textarea {
 <script>
 let turmaSelecionada = "";
 let itens = [];
-
-function selectTurma(btn, turma) {
-  document.querySelectorAll("#turmaBtns button").forEach(b => b.classList.remove("active"));
-  btn.classList.add("active");
-  turmaSelecionada = turma;
-}
-
-function addItem() {
-  const index = itens.length;
-  itens.push({});
-
-  const div = document.createElement("div");
-  div.className = "section";
-  div.innerHTML = `
-    <label>Setor</label>
-    <div class="btn-group">
-      ${["Rota do Líder","Setor 01","Setor 02","Setor 03","Setor 04","Setor 05"].map(s =>
-        `<button onclick="selectSetor(${index},this,'${s}')">${s}</button>`
-      ).join("")}
-    </div>
-
-    <label>Título</label>
-    <input type="text" onchange="itens[${index}].titulo=this.value">
-
-    <label>Foto</label>
-    <input type="file"
-           accept="image/*,.heic,.heif"
-           onchange="loadImage(event,${index})">
-
-    <label>Responsável</label>
-    <input type="text" onchange="itens[${index}].responsavel=this.value">
-
-    <label>Status</label>
-    <div class="btn-group">
-      <button class="status-ok" onclick="selectStatus(${index},this,'OK')">OK</button>
-      <button class="status-nok" onclick="selectStatus(${index},this,'N/OK')">N/OK</button>
-      <button class="status-att" onclick="selectStatus(${index},this,'ATENÇÃO')">ATENÇÃO</button>
-    </div>
-
-    <label>Observações</label>
-    <textarea onchange="itens[${index}].obs=this.value"></textarea>
-  `;
-  document.getElementById("itens").appendChild(div);
-}
-
-function selectSetor(i, btn, setor) {
-  btn.parentElement.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
-  itens[i].setor = setor;
-}
-
-function selectStatus(i, btn, status) {
-  btn.parentElement.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
-  itens[i].status = status;
-}
-
-async function loadImage(e, i) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const ext = file.name.split(".").pop().toLowerCase();
-
-  // HEIC / HEIF → converte para JPEG
-  if (ext === "heic" || ext === "heif") {
-    try {
-      const blob = await heic2any({
-        blob: file,
-        toType: "image/jpeg",
-        quality: 0.9
-      });
-
-      const reader = new FileReader();
-      reader.onload = () => itens[i].img = reader.result;
-      reader.readAsDataURL(blob);
-
-    } catch (err) {
-      alert("Erro ao converter imagem HEIC/HEIF");
-      console.error(err);
-    }
-
-  } else {
-    // JPG, PNG, etc
-    const reader = new FileReader();
-    reader.onload = () => itens[i].img = reader.result;
-    reader.readAsDataURL(file);
-  }
-}
-
-function drawHeader(pdf, data, turma) {
-  pdf.setFontSize(12);
-  pdf.setTextColor(0, 0, 0);
-  pdf.text(`ROTA - Turma ${turma}`, 10, 10);
-  pdf.text(`Data: ${data}`, 160, 10);
-  pdf.line(10, 12, 200, 12);
-}
-
 async function gerarPDF() {
   const data = document.getElementById("data").value;
 
@@ -233,7 +88,6 @@ async function gerarPDF() {
 
       pdf.setFontSize(14);
       pdf.text(`${setor} - ${item.titulo}`, 10, 22);
-
       pdf.addImage(item.img, "JPEG", 10, 30, 190, 100);
 
       pdf.setFontSize(12);
@@ -256,10 +110,20 @@ async function gerarPDF() {
     }
   }
 
-  pdf.save(`ROTA_${turmaSelecionada}_${data}.pdf`);
+  // GERA O BLOB E DISPARA O MENU "ABRIR COM"
+  const blob = pdf.output("blob");
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ROTA_${turmaSelecionada}_${data}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 </script>
 
 </body>
-
 </html>

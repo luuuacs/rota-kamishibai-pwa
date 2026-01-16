@@ -21,21 +21,18 @@ if ('serviceWorker' in navigator) {
 body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 15px; }
 h2 { margin-top: 0; text-align: center; }
 .section { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ddd; }
-button { padding: 10px; margin: 5px 3px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-
+button { padding: 10px; margin: 5px 3px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
 .btn-group { display: flex; justify-content: space-between; }
 .btn-group button { flex: 1; background: #eee; color: #333; border: 1px solid #ccc; }
-
-/* Cores de Status Corrigidas */
 button.status-ok { background-color: #3ec303 !important; color: white !important; }
 button.status-nok { background-color: #DC2828 !important; color: white !important; }
 button.status-att { background-color: #f4bb31 !important; color: white !important; }
 .active-turma { outline: 3px solid black; background: #333 !important; color: white !important; }
-
 input, textarea, select { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
 .add-btn { width: 100%; background: #444; color: white; margin-top: 10px; }
 .finish-btn { width: 100%; background: #000; color: white; font-size: 18px; margin-top: 20px; padding: 15px; }
 .remove-btn { background: #ffeded; color: red; width: 100%; font-size: 12px; margin-top: 10px; border: 1px solid #ffcccc; }
+.loading-msg { font-size: 12px; color: #666; font-style: italic; display: none; }
 </style>
 </head>
 
@@ -44,9 +41,8 @@ input, textarea, select { width: 100%; padding: 10px; margin-top: 5px; margin-bo
 <h2>ROTA KAMISHIBAI</h2>
 
 <div class="section">
-  <label><strong>Data da Inspeção</strong></label>
+  <label><strong>Data</strong></label>
   <input type="date" id="data">
-
   <label><strong>Turma</strong></label>
   <div class="btn-group" id="turmaBtns">
     <button onclick="selectTurma(this,'A')">A</button>
@@ -57,8 +53,7 @@ input, textarea, select { width: 100%; padding: 10px; margin-top: 5px; margin-bo
 </div>
 
 <div id="itens"></div>
-
-<button class="add-btn" onclick="addItem()">+ Adicionar novo item</button>
+<button class="add-btn" onclick="addItem()">+ Adicionar item</button>
 <br>
 <button class="finish-btn" onclick="gerarPDF()">Finalizar e Abrir PDF</button>
 
@@ -76,27 +71,22 @@ function addItem() {
   const id = Date.now();
   const setores = ["Rota do Líder","Setor 01","Setor 02","Setor 03","Setor 04","Setor 05"];
   const setorOptions = setores.map(s => `<option value="${s}">${s}</option>`).join('');
-
   const html = `
     <div class="section" id="item-${id}">
-      <label>Setor</label>
-      <select onchange="updateItem(${id}, 'setor', this.value)">
-        <option value="">Selecione o Setor</option>
-        ${setorOptions}
-      </select>
-      <input type="text" placeholder="Título do Ponto" onchange="updateItem(${id}, 'titulo', this.value)">
+      <select onchange="updateItem(${id}, 'setor', this.value)"><option value="">Selecione o Setor</option>${setorOptions}</select>
+      <input type="text" placeholder="Título" onchange="updateItem(${id}, 'titulo', this.value)">
+      <label style="font-size:12px">Foto (JPG, PNG, HEIC, HEIF)</label>
       <input type="file" accept="image/*" onchange="handleImg(${id}, this)">
+      <div id="loading-${id}" class="loading-msg">Processando imagem... aguarde.</div>
       <input type="text" placeholder="Responsável" onchange="updateItem(${id}, 'responsavel', this.value)">
-      
       <div class="btn-group">
         <button onclick="setStatus(${id}, 'OK', this)">OK</button>
         <button onclick="setStatus(${id}, 'N/OK', this)">N/OK</button>
         <button onclick="setStatus(${id}, 'ATT', this)">ATT</button>
       </div>
       <textarea placeholder="Observações" onchange="updateItem(${id}, 'obs', this.value)"></textarea>
-      <button class="remove-btn" onclick="removeItem(${id})">Excluir item</button>
-    </div>
-  `;
+      <button class="remove-btn" onclick="removeItem(${id})">Remover item</button>
+    </div>`;
   document.getElementById('itens').insertAdjacentHTML('beforeend', html);
   itens.push({ id, setor: '', titulo: '', img: '', responsavel: '', status: '', obs: '' });
 }
@@ -114,38 +104,49 @@ function updateItem(id, campo, valor) {
 function setStatus(id, status, btn) {
   const item = itens.find(i => i.id === id);
   if (item) item.status = status;
-  
   const botoes = btn.parentElement.querySelectorAll('button');
   botoes.forEach(b => b.classList.remove('status-ok', 'status-nok', 'status-att'));
-
   if (status === 'OK') btn.classList.add('status-ok');
   else if (status === 'N/OK') btn.classList.add('status-nok');
   else if (status === 'ATT') btn.classList.add('status-att');
 }
 
-function handleImg(id, input) {
+async function handleImg(id, input) {
   const file = input.files[0];
   if (!file) return;
+  
+  const loading = document.getElementById(`loading-${id}`);
+  loading.style.display = "block";
 
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      // Redimensionamento para evitar que o PDF quebre ou fique gigante
-      const maxW = 1000; 
-      const scale = maxW / img.width;
-      canvas.width = maxW;
-      canvas.height = img.height * scale;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      // Força formato JPEG (PDF amigável)
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-      updateItem(id, 'img', dataUrl);
+  try {
+    let blob = file;
+    const name = file.name.toLowerCase();
+    // Suporte para HEIC e HEIF
+    if (name.endsWith(".heic") || name.endsWith(".heif")) {
+      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.7 });
+      blob = Array.isArray(converted) ? converted[0] : converted;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const maxW = 1000;
+        const scale = maxW / img.width;
+        canvas.width = maxW;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        updateItem(id, 'img', canvas.toDataURL('image/jpeg', 0.8));
+        loading.style.display = "none";
+      };
+      img.src = e.target.result;
     };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+    reader.readAsDataURL(blob);
+  } catch (err) {
+    alert("Erro ao processar imagem. Tente outro formato.");
+    loading.style.display = "none";
+  }
 }
 
 function drawHeader(pdf, data, turma) {
@@ -153,55 +154,43 @@ function drawHeader(pdf, data, turma) {
   pdf.setFont("helvetica", "bold");
   pdf.text("ROTA KAMISHIBAI", 10, 12);
   pdf.setFontSize(10);
-  pdf.setFont("helvetica", "normal");
-  pdf.text(`Data: ${data} | Turma: ${turma}`, 145, 12);
+  pdf.text(`Data: ${data} | Turma: ${turma}`, 140, 12);
   pdf.line(10, 15, 200, 15);
 }
 
 async function gerarPDF() {
   const dataVal = document.getElementById("data").value;
   if (!dataVal || !turmaSelecionada || itens.length === 0) {
-    alert("Erro: Preencha Data, Turma e adicione pelo menos um item com foto.");
+    alert("Preencha Data, Turma e adicione itens.");
     return;
   }
-
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF("p","mm","a4");
   const ordemSetores = ["Rota do Líder","Setor 01","Setor 02","Setor 03","Setor 04","Setor 05"];
   let first = true;
 
   for (let setor of ordemSetores) {
-    const itensDoSetor = itens.filter(i => i.setor === setor);
-    for (let item of itensDoSetor) {
-      if (!item.titulo || !item.img || !item.status) continue;
+    for (let item of itens.filter(i=>i.setor===setor)) {
+      if (!item.img) continue;
       if (!first) pdf.addPage();
       first = false;
-
       drawHeader(pdf, dataVal, turmaSelecionada);
       pdf.setFontSize(14);
       pdf.setFont("helvetica", "bold");
       pdf.text(`${setor} - ${item.titulo}`, 10, 25);
-      
-      try {
-        pdf.addImage(item.img, "JPEG", 10, 30, 190, 100, undefined, 'FAST');
-      } catch(e) { console.error("Erro imagem"); }
-
+      pdf.addImage(item.img, "JPEG", 10, 30, 190, 100, undefined, 'FAST');
       pdf.setFontSize(12);
       pdf.text(`Responsável: ${item.responsavel || '---'}`, 10, 140);
-
       let cor = item.status==="OK" ? [62,195,3] : item.status==="N/OK" ? [220,40,40] : [244,187,49];
       pdf.setFillColor(...cor);
       pdf.rect(10, 150, 40, 10, "F");
       pdf.setTextColor(255,255,255);
-      pdf.text(item.status, 15, 157);
-
+      pdf.text(item.status || "S/S", 15, 157);
       pdf.setTextColor(0,0,0);
       if (item.obs) {
-        pdf.setFont("helvetica", "bold");
-        pdf.text("Observações:", 10, 170);
-        pdf.setFont("helvetica", "normal");
+        pdf.text("Obs:", 10, 170);
         pdf.setFontSize(10);
-        pdf.text(item.obs, 10, 178, {maxWidth: 185});
+        pdf.text(item.obs, 10, 176, {maxWidth: 185});
       }
     }
   }
@@ -209,11 +198,8 @@ async function gerarPDF() {
   const pdfBlob = pdf.output("blob");
   const fileName = `ROTA_${turmaSelecionada}_${dataVal}.pdf`;
   const file = new File([pdfBlob], fileName, { type: "application/pdf" });
-
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: 'Relatório Kamishibai' });
-    } catch (err) { pdf.save(fileName); }
+    await navigator.share({ files: [file], title: 'Relatório' }).catch(() => pdf.save(fileName));
   } else {
     pdf.save(fileName);
   }

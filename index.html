@@ -19,20 +19,23 @@ if ('serviceWorker' in navigator) {
 <style>
 * { box-sizing: border-box; }
 body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 15px; }
-h2 { margin-top: 0; text-align: center; color: #333; }
-.section { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-button { padding: 12px; margin: 5px 3px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-.btn-group { display: flex; justify-content: space-between; margin-top: 5px; }
+h2 { margin-top: 0; text-align: center; }
+.section { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ddd; }
+button { padding: 10px; margin: 5px 3px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+.btn-group { display: flex; justify-content: space-between; }
 .btn-group button { flex: 1; background: #eee; color: #333; border: 1px solid #ccc; }
-.btn-group button.active { background: #333 !important; color: white !important; outline: none; }
-.status-ok { background: #3ec303 !important; color: white; }
-.status-nok { background: #DC2828 !important; color: white; }
-.status-att { background: #f4bb31 !important; color: white; }
-input, textarea, select { width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-label { font-weight: bold; font-size: 14px; color: #555; }
-.add-btn { width: 100%; background: #444; color: white; margin-top: 10px; font-size: 16px; }
-.finish-btn { width: 100%; background: #000; color: white; font-size: 18px; margin-top: 20px; padding: 15px; }
-.remove-btn { background: #ffeded; color: #cc0000; border: 1px solid #ffcccc; width: 100%; margin-top: 10px; }
+
+/* Cores de Status - Agora corrigidas */
+.status-ok { background-color: #3ec303 !important; color: white !important; }
+.status-nok { background-color: #DC2828 !important; color: white !important; }
+.status-att { background-color: #f4bb31 !important; color: white !important; }
+.active-turma { outline: 3px solid black; background: #333 !important; color: white !important; }
+
+input, textarea, select { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+.add-btn { width: 100%; background: #444; color: white; }
+.finish-btn { width: 100%; background: #000; color: white; font-size: 18px; margin-top: 20px; }
+.remove-btn { background: #ffeded; color: red; width: 100%; font-size: 12px; margin-top: 10px; }
 </style>
 </head>
 
@@ -41,10 +44,10 @@ label { font-weight: bold; font-size: 14px; color: #555; }
 <h2>ROTA KAMISHIBAI</h2>
 
 <div class="section">
-  <label>Data da Inspeção</label>
+  <label>Data</label>
   <input type="date" id="data">
 
-  <label>Selecione a Turma</label>
+  <label>Turma</label>
   <div class="btn-group" id="turmaBtns">
     <button onclick="selectTurma(this,'A')">A</button>
     <button onclick="selectTurma(this,'B')">B</button>
@@ -55,17 +58,17 @@ label { font-weight: bold; font-size: 14px; color: #555; }
 
 <div id="itens"></div>
 
-<button class="add-btn" onclick="addItem()">+ Adicionar Novo Item</button>
+<button class="add-btn" onclick="addItem()">+ Adicionar item</button>
 <br>
-<button class="finish-btn" onclick="gerarPDF()">Finalizar e Abrir PDF</button>
+<button class="finish-btn" onclick="gerarPDF()">Finalizar e abrir PDF</button>
 
 <script>
 let turmaSelecionada = "";
 let itens = [];
 
 function selectTurma(btn, valor) {
-  document.querySelectorAll('#turmaBtns button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll('#turmaBtns button').forEach(b => b.classList.remove('active-turma'));
+  btn.classList.add('active-turma');
   turmaSelecionada = valor;
 }
 
@@ -76,32 +79,21 @@ function addItem() {
 
   const html = `
     <div class="section" id="item-${id}">
-      <label>Setor</label>
       <select onchange="updateItem(${id}, 'setor', this.value)">
-        <option value="">Selecione o Setor...</option>
+        <option value="">Selecione o Setor</option>
         ${setorOptions}
       </select>
-      
-      <label>Título / Ponto de Verificação</label>
-      <input type="text" placeholder="Ex: Organização de ferramentas" onchange="updateItem(${id}, 'titulo', this.value)">
-      
-      <label>Capturar Foto</label>
+      <input type="text" placeholder="Título" onchange="updateItem(${id}, 'titulo', this.value)">
       <input type="file" accept="image/*" onchange="handleImg(${id}, this)">
+      <input type="text" placeholder="Responsável" onchange="updateItem(${id}, 'responsavel', this.value)">
       
-      <label>Responsável</label>
-      <input type="text" placeholder="Nome do responsável" onchange="updateItem(${id}, 'responsavel', this.value)">
-      
-      <label>Status da Verificação</label>
-      <div class="btn-group" id="status-group-${id}">
+      <div class="btn-group">
         <button onclick="setStatus(${id}, 'OK', this)">OK</button>
         <button onclick="setStatus(${id}, 'N/OK', this)">N/OK</button>
         <button onclick="setStatus(${id}, 'ATT', this)">ATT</button>
       </div>
-      
-      <label style="display:block; margin-top:10px;">Observações</label>
-      <textarea placeholder="Descreva detalhes se necessário..." onchange="updateItem(${id}, 'obs', this.value)"></textarea>
-      
-      <button class="remove-btn" onclick="removeItem(${id})">Excluir este item</button>
+      <textarea placeholder="Observações" onchange="updateItem(${id}, 'obs', this.value)"></textarea>
+      <button class="remove-btn" onclick="removeItem(${id})">Remover item</button>
     </div>
   `;
   document.getElementById('itens').insertAdjacentHTML('beforeend', html);
@@ -122,9 +114,12 @@ function setStatus(id, status, btn) {
   const item = itens.find(i => i.id === id);
   if (item) item.status = status;
   
-  const parent = btn.parentElement;
-  parent.querySelectorAll('button').forEach(b => b.className = '');
-  btn.className = status === 'OK' ? 'status-ok active' : status === 'N/OK' ? 'status-nok active' : 'status-att active';
+  const botoes = btn.parentElement.querySelectorAll('button');
+  botoes.forEach(b => b.classList.remove('status-ok', 'status-nok', 'status-att'));
+
+  if (status === 'OK') btn.classList.add('status-ok');
+  else if (status === 'N/OK') btn.classList.add('status-nok');
+  else if (status === 'ATT') btn.classList.add('status-att');
 }
 
 function handleImg(id, input) {
@@ -136,19 +131,18 @@ function handleImg(id, input) {
 }
 
 function drawHeader(pdf, data, turma) {
-  pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
-  pdf.text("ROTA KAMISHIBAI", 10, 15);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("ROTA KAMISHIBAI", 10, 12);
   pdf.setFontSize(10);
-  pdf.setFont("helvetica", "normal");
-  pdf.text(`Data: ${data} | Turma: ${turma}`, 145, 15);
-  pdf.line(10, 18, 200, 18);
+  pdf.text(`Data: ${data} | Turma: ${turma}`, 140, 12);
+  pdf.line(10, 15, 200, 15);
 }
 
 async function gerarPDF() {
-  const dataInput = document.getElementById("data").value;
-  if (!dataInput || !turmaSelecionada || itens.length === 0) {
-    alert("Erro: Verifique se preencheu a DATA, a TURMA e se adicionou ITENS.");
+  const data = document.getElementById("data").value;
+  if (!data || !turmaSelecionada || itens.length === 0) {
+    alert("Preencha data, turma e adicione itens.");
     return;
   }
 
@@ -158,65 +152,44 @@ async function gerarPDF() {
   let first = true;
 
   for (let setor of ordemSetores) {
-    const itensDoSetor = itens.filter(i => i.setor === setor);
-    for (let item of itensDoSetor) {
+    for (let item of itens.filter(i=>i.setor===setor)) {
       if (!item.titulo || !item.img || !item.status) continue;
-
       if (!first) pdf.addPage();
       first = false;
 
-      drawHeader(pdf, dataInput, turmaSelecionada);
-
+      drawHeader(pdf, data, turmaSelecionada);
       pdf.setFontSize(14);
-      pdf.setFont("helvetica", "bold");
-      pdf.text(`${setor} - ${item.titulo}`, 10, 28);
-      
-      try {
-        pdf.addImage(item.img, "JPEG", 10, 35, 190, 100);
-      } catch(e) { console.warn("Erro ao carregar imagem no PDF"); }
-
+      pdf.text(`${setor} - ${item.titulo}`, 10, 25);
+      pdf.addImage(item.img, "JPEG", 10, 30, 190, 100);
       pdf.setFontSize(12);
-      pdf.text(`Responsável: ${item.responsavel || 'Não informado'}`, 10, 145);
+      pdf.text(`Responsável: ${item.responsavel}`, 10, 140);
 
       let cor = item.status==="OK" ? [62,195,3] : item.status==="N/OK" ? [220,40,40] : [244,187,49];
       pdf.setFillColor(...cor);
-      pdf.rect(10, 150, 30, 8, "F");
-      pdf.setTextColor(255, 255, 255);
-      pdf.text(item.status, 15, 156);
+      pdf.rect(10, 150, 40, 10, "F");
+      pdf.setTextColor(255,255,255);
+      pdf.text(item.status, 15, 157);
 
       pdf.setTextColor(0,0,0);
       if (item.obs) {
-        pdf.setFont("helvetica", "bold");
-        pdf.text("Observações:", 10, 168);
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        pdf.text(item.obs, 10, 174, {maxWidth: 185});
+        pdf.text("Observações:", 10, 170);
+        pdf.text(item.obs, 10, 178, {maxWidth: 190});
       }
     }
   }
 
-  // LÓGICA DE COMPARTILHAMENTO / ABRIR NO ANDROID
   const pdfBlob = pdf.output("blob");
-  const nomeArquivo = `ROTA_${turmaSelecionada}_${dataInput}.pdf`;
-  const arquivoParaCompartilhar = new File([pdfBlob], nomeArquivo, { type: "application/pdf" });
+  const fileName = `ROTA_${turmaSelecionada}_${data}.pdf`;
+  const file = new File([pdfBlob], fileName, { type: "application/pdf" });
 
-  if (navigator.canShare && navigator.canShare({ files: [arquivoParaCompartilhar] })) {
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({
-        files: [arquivoParaCompartilhar],
-        title: 'Relatório Rota Kamishibai',
-        text: `Relatório de Inspeção - Turma ${turmaSelecionada}`,
-      });
-    } catch (err) {
-      // Se o usuário cancelar o compartilhamento, o sistema tenta salvar o arquivo
-      pdf.save(nomeArquivo);
-    }
+      await navigator.share({ files: [file], title: 'Rota Kamishibai' });
+    } catch (err) { pdf.save(fileName); }
   } else {
-    // Caso o navegador não suporte compartilhamento (browsers antigos ou PC)
-    pdf.save(nomeArquivo);
+    pdf.save(fileName);
   }
 }
 </script>
-
 </body>
 </html>

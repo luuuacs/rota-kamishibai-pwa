@@ -1,21 +1,24 @@
-const CACHE_NAME = "rota-kamishibai-v2";
+const CACHE_NAME = "rota-kamishibai-v3";
 
 const FILES_TO_CACHE = [
   "./",
+  "./index.html",
   "./manifest.json",
-  "./icon-192.png",
-  "./icon-512.png"
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+  "https://unpkg.com/heic2any/dist/heic2any.min.js"
 ];
 
-// Instalação e cache de arquivos essenciais
+// Instalação
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE))
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(FILES_TO_CACHE);
+    })
   );
   self.skipWaiting();
 });
 
-// Ativação
+// Ativação (Limpa caches antigos)
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then(keys => Promise.all(
@@ -27,24 +30,20 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// Estratégia fetch: network first, fallback cache
+// Estratégia Fetch
 self.addEventListener("fetch", (e) => {
-  if (e.request.url.includes("jspdf") || e.request.url.includes("heic2any") || e.request.url.endsWith("index.html")) {
-    // Network first para scripts e HTML
-    e.respondWith(
-      fetch(e.request)
-        .then(res => {
-          // Atualiza cache
-          const resClone = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(e.request, resClone));
-          return res;
-        })
-        .catch(() => caches.match(e.request))
-    );
-  } else {
-    // Cache first para ícones, manifest e outros assets
-    e.respondWith(
-      caches.match(e.request).then(res => res || fetch(e.request))
-    );
-  }
+  e.respondWith(
+    caches.match(e.request).then(response => {
+      return response || fetch(e.request).then(fetchRes => {
+        return caches.open(CACHE_NAME).then(cache => {
+          // Opcional: colocar novos requests no cache
+          if(e.request.method === 'GET') cache.put(e.request, fetchRes.clone());
+          return fetchRes;
+        });
+      });
+    }).catch(() => {
+      // Se estiver offline e sem cache
+      if (e.request.mode === 'navigate') return caches.match("./index.html");
+    })
+  );
 });

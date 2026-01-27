@@ -1,9 +1,9 @@
 /**
  * ROTA KAMISHIBAI - Service Worker
- * Versão: 1.0.4 (Aumentei para garantir que os navegadores baixem a nova lógica)
+ * Versão: 1.0.5
  */
 
-const CACHE_NAME = "rota-kamishibai-v1.0.4";
+const CACHE_NAME = "rota-kamishibai-v1.0.5";
 
 // Arquivos essenciais para funcionamento offline
 const STATIC_ASSETS = [
@@ -64,3 +64,4 @@ self.addEventListener("fetch", (event) => {
         })
     );
 });
+

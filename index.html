@@ -223,29 +223,38 @@
                 if (!file) return;
                 const loader = document.getElementById(`loading-${itemId}`);
                 loader.style.display = "block";
+                loader.innerText = "⏳ Processando...";
 
                 try {
-                    let blob = file;
-                    if (file.name.toLowerCase().endsWith(".heic")) {
-                        blob = await heic2any({ blob, toType: "image/jpeg", quality: 0.6 });
-                    }
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const maxW = 800;
-                            const scale = maxW / img.width;
-                            canvas.width = maxW;
-                            canvas.height = img.height * scale;
-                            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                            this.updateItem(itemId, 'img', canvas.toDataURL('image/jpeg', 0.7));
-                            loader.innerText = "✅ Pronta";
-                        };
-                        img.src = e.target.result;
+                let blob = file;
+                if (file.name.toLowerCase().endsWith(".heic")) {
+                    blob = await heic2any({ blob, toType: "image/jpeg", quality: 0.6 });
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const maxW = 800; 
+                        const scale = maxW / img.width;
+                        canvas.width = maxW;
+                        canvas.height = img.height * scale;
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                        const base64 = canvas.toDataURL('image/jpeg', 0.7);
+                        // Salva no Firebase
+                        App.updateItem(itemId, 'img', base64);
+                
+                        // Feedback imediato na tela
+                        loader.innerHTML = "<b style='color:green'>✅ Foto salva!</b>";
                     };
-                    reader.readAsDataURL(blob);
-                } catch (e) { alert("Erro na imagem"); loader.style.display="none"; }
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(blob);
+                } catch (e) { 
+                    alert("Erro na imagem"); 
+                    loader.style.display="none"; 
+                }
             },
 
             async gerarPDF() {
@@ -298,34 +307,51 @@
             renderItens(itens) {
                 const container = document.getElementById('itensContainer');
                 container.innerHTML = "";
-                for (let id in itens) {
-                    const item = itens[id];
+    
+                const itensArray = Object.values(itens).sort((a,b) => 
+                    App.setores.indexOf(a.setor) - App.setores.indexOf(b.setor));
+
+                itensArray.forEach(item => {
+                    const id = item.id;
                     const isOwner = String(item.owner) === String(App.user.mat);
                     const disabled = !isOwner ? 'disabled' : '';
+                    const temFoto = !!item.img; 
 
                     container.innerHTML += `
                         <div class="section">
-                            <span class="owner-tag">Por: ${item.responsavel}</span>
+                            <span class="owner-tag">Resp: ${item.responsavel}</span>
                             <select ${disabled} onchange="App.updateItem('${id}', 'setor', this.value)">
                                 <option value="">Setor</option>
                                 ${App.setores.map(s => `<option value="${s}" ${item.setor===s?'selected':''}>${s}</option>`).join('')}
                             </select>
                             <input type="text" placeholder="Título" value="${item.titulo}" ${disabled} onchange="App.updateItem('${id}', 'titulo', this.value)">
-                            
-                            ${isOwner ? `
-                                <label>Foto</label>
-                                <input type="file" accept="image/*" onchange="App.handleImg('${id}', this)">
-                                <div id="loading-${id}" class="loading-msg">Processando...</div>
-                            ` : item.img ? '<p style="font-size:12px; color:green">📷 Foto anexada</p>' : '<p style="font-size:12px; color:red">⚠️ Sem foto</p>'}
+                
+                            <div style="margin: 10px 0; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: ${temFoto ? '#f0fff0' : '#fafafa'}">
+                                <label style="font-size:13px">${temFoto ? '✅ Foto no Sistema' : '📷 Adicionar Foto'}</label>
+                    
+                                ${temFoto ? `
+                                    <div style="margin-top:8px; display:flex; align-items:center; gap:10px">
+                                        <img src="${item.img}" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #ddd">
+                                        ${isOwner ? `<button onclick="document.getElementById('file-${id}').click()" style="font-size:11px; padding:5px; background:#fff; border:1px solid #ccc; border-radius:4px">Trocar Foto</button>` : ''}
+                                    </div>
+                                ` : ''}
+
+                                ${isOwner ? `
+                                    <input type="file" id="file-${id}" accept="image/*" 
+                                        style="${temFoto ? 'display:none' : 'display:block'}; margin-top:8px"
+                                           onchange="App.handleImg('${id}', this)">
+                                ` : ''}
+                                <div id="loading-${id}" class="loading-msg"></div>
+                            </div>
 
                             <div class="btn-group">
                                 <button class="${item.status==='OK'?'status-ok':''}" ${disabled} onclick="App.updateItem('${id}', 'status', 'OK')">OK</button>
                                 <button class="${item.status==='N/OK'?'status-nok':''}" ${disabled} onclick="App.updateItem('${id}', 'status', 'N/OK')">N/OK</button>
                             </div>
-                            <textarea placeholder="Obs" ${disabled} onchange="App.updateItem('${id}', 'obs', this.value)">${item.obs}</textarea>
-                            ${isOwner ? `<button class="remove-btn" onclick="remove(ref(db, 'relatorios/${App.currentReportId}/itens/${id}'))">Remover</button>` : ''}
+                            <textarea placeholder="Obs" ${disabled} onchange="App.updateItem('${id}', 'obs', this.value)">${item.obs || ''}</textarea>
+                            ${isOwner ? `<button class="remove-btn" onclick="if(confirm('Apagar item?')) remove(ref(db, 'relatorios/${App.currentReportId}/itens/${id}'))">Remover</button>` : ''}
                         </div>`;
-                }
+                });
             }
         };
 
@@ -337,3 +363,4 @@
     </script>
 </body>
 </html>
+

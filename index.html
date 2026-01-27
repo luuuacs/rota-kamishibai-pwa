@@ -226,6 +226,7 @@
             addItem() {
                 const itemRef = push(ref(db, `relatorios/${this.currentReportId}/itens`));
                 set(itemRef, {
+                    createdAt: Date.now(),
                     id: itemRef.key,
                     owner: this.user.mat,
                     responsavel: this.user.nome,
@@ -360,8 +361,8 @@
     
                 // --- ORDENAÇÃO NA TELA DE EDIÇÃO (Apenas cronológica) ---
                 // Isso impede que os itens mudem de lugar ao selecionar o setor
-                const itensArray = Object.values(itens).sort((a,b) => {
-                    return a.id.localeCompare(b.id);
+                const itensArray = Object.values(itens).sort((a, b) => {
+                    return (a.createdAt || 0) - (b.createdAt || 0);
                 });
 
                 itensArray.forEach(item => {
@@ -416,3 +417,4 @@
     </script>
 </body>
 </html>
+

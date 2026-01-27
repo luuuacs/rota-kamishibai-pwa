@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rota Kamishibai</title>
+    <title>Rota Kamishibai - Colaborativo</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#444444">
 
@@ -11,7 +11,6 @@
     <script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
 
     <style>
-        /* Variáveis de Estilo para facilitar manutenção */
         :root {
             --bg-color: #f4f4f4;
             --card-bg: #ffffff;
@@ -19,334 +18,322 @@
             --text-dark: #333333;
             --primary: #444444;
             --secondary: #000000;
-            
-            /* Cores de Status */
             --status-ok: #3ec303;
             --status-nok: #DC2828;
             --status-att: #f4bb31;
-            --status-remove: #ffeded;
-            --status-remove-border: #ffcccc;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-        body { 
-            font-family: 'Segoe UI', Roboto, Arial, sans-serif; 
-            background: var(--bg-color); 
-            margin: 0; 
-            padding: 15px; 
-            color: var(--text-dark);
-        }
-
-        h2 { margin-top: 0; text-align: center; color: var(--secondary); text-transform: uppercase; letter-spacing: 1px; }
-
-        /* Estrutura de Seções */
-        .section { 
-            background: var(--card-bg); 
-            padding: 15px; 
-            margin-bottom: 15px; 
-            border-radius: 8px; 
-            border: 1px solid var(--border-color);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-
-        /* Inputs e Botões */
-        input, textarea, select { 
-            width: 100%; 
-            padding: 12px; 
-            margin-top: 5px; 
-            margin-bottom: 12px; 
-            border: 1px solid var(--border-color); 
-            border-radius: 6px; 
-            font-size: 16px; 
-            outline: none;
-        }
-
-        button { 
-            padding: 12px; 
-            margin: 5px 2px; 
-            border: none; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            transition: opacity 0.2s, transform 0.1s;
-        }
-
-        button:active { transform: scale(0.98); }
-
-        .btn-group { display: flex; gap: 8px; justify-content: space-between; margin-bottom: 10px; }
-        .btn-group button { flex: 1; background: #eee; color: var(--text-dark); border: 1px solid #ccc; }
-
-        /* Estados Ativos e Cores de Status */
-        .active-turma { background: var(--secondary) !important; color: white !important; box-shadow: 0 0 0 2px black; }
-        .status-ok { background-color: var(--status-ok) !important; color: white !important; }
-        .status-nok { background-color: var(--status-nok) !important; color: white !important; }
-        .status-att { background-color: var(--status-att) !important; color: white !important; }
-
-        /* Botões de Ação */
-        .add-btn { width: 100%; background: var(--primary); color: white; margin-top: 10px; font-size: 16px; }
-        .finish-btn { width: 100%; background: var(--secondary); color: white; font-size: 18px; margin-top: 20px; padding: 18px; }
-        .remove-btn { background: var(--status-remove); color: #d32f2f; width: 100%; font-size: 13px; margin-top: 10px; border: 1px solid var(--status-remove-border); }
-
-        .loading-msg { font-size: 13px; color: #666; font-style: italic; display: none; margin-bottom: 10px; text-align: center; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-color); margin: 0; padding: 15px; color: var(--text-dark); }
         
-        /* Notificação de Atualização */
-        #update-toast {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: #333; color: white; padding: 15px 25px; border-radius: 30px;
-            display: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            align-items: center; gap: 10px;
-        }
+        /* Utilitários de Visibilidade */
+        .view { display: none; animation: fadeIn 0.3s; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Cabeçalho Fixo */
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header-bar h2 { margin: 0; font-size: 1.2rem; }
+
+        .section { background: var(--card-bg); padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
+        
+        /* Lista de Relatórios */
+        .report-card { width: 100%; text-align: left; padding: 20px; margin-bottom: 10px; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; }
+        .report-card:hover { border-color: var(--primary); }
+        .report-card h3 { margin: 0 0 5px 0; font-size: 1rem; }
+        .report-card span { font-size: 0.8rem; color: #666; }
+
+        /* Estilos de Form */
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        input, textarea, select { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 16px; outline: none; }
+        button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-add { background: var(--primary); color: white; width: 100%; margin: 10px 0; }
+        .btn-finish { background: var(--secondary); color: white; width: 100%; margin-top: 20px; }
+        .remove-btn { background: #ffeded; color: #d32f2f; width: 100%; font-size: 12px; margin-top: 5px; }
+
+        .btn-group { display: flex; gap: 8px; margin-bottom: 10px; }
+        .btn-group button { flex: 1; background: #eee; font-size: 0.8rem; }
+        .active-turma { background: var(--secondary) !important; color: white !important; }
+        .status-ok { background: var(--status-ok) !important; color: white !important; }
+        .status-nok { background: var(--status-nok) !important; color: white !important; }
+        .status-att { background: var(--status-att) !important; color: white !important; }
+        
+        .owner-tag { position: absolute; top: 10px; right: 10px; font-size: 10px; color: #999; }
+        .loading-msg { font-size: 12px; color: #666; display: none; text-align: center; }
     </style>
 </head>
-
 <body>
 
-    <h2>Rota Kamishibai</h2>
-
-    <div class="section">
-        <label for="data">Data do Relatório</label>
-        <input type="date" id="data">
-        
-        <label>Selecione a Turma</label>
-        <div class="btn-group" id="turmaBtns">
-            <button type="button" onclick="UI.selectTurma(this, 'A')">A</button>
-            <button type="button" onclick="UI.selectTurma(this, 'B')">B</button>
-            <button type="button" onclick="UI.selectTurma(this, 'C')">C</button>
-            <button type="button" onclick="UI.selectTurma(this, 'D')">D</button>
+    <div id="view-login" class="view active">
+        <h2>Acesso Rota Kamishibai</h2>
+        <div class="section">
+            <label>Nome Completo</label>
+            <input type="text" id="login-nome" placeholder="Seu nome">
+            <label>Matrícula</label>
+            <input type="number" id="login-mat" placeholder="Sua matrícula">
+            <label>Senha do Sistema</label>
+            <input type="password" id="login-senha" placeholder="Senha única">
+            <button class="btn-primary" onclick="App.realizarLogin()">Entrar</button>
         </div>
     </div>
 
-    <div id="itensContainer"></div>
-
-    <button type="button" class="add-btn" onclick="App.addItem()">+ Adicionar Novo Item</button>
-    <button type="button" class="finish-btn" onclick="App.gerarPDF()">Finalizar e Compartilhar PDF</button>
-
-    <div id="update-toast">
-        <span>Nova versão disponível!</span>
-        <button onclick="window.location.reload()" style="background: #fff; color: #000; padding: 5px 10px; margin: 0">Atualizar</button>
+    <div id="view-list" class="view">
+        <div class="header-bar">
+            <h2>Relatórios Ativos</h2>
+            <button onclick="App.criarNovoRelatorio()" style="background:var(--status-ok); color:white; padding:8px 15px">+ Novo</button>
+        </div>
+        <div id="lista-relatorios"></div>
     </div>
 
-    <script>
-        /** * LÓGICA DE SERVICE WORKER E ATUALIZAÇÃO AUTOMÁTICA 
-         */
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js').then(reg => {
-                    // Verifica se já existe um novo worker esperando
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                document.getElementById('update-toast').style.display = 'flex';
-                            }
-                        });
-                    });
-                });
-            });
+    <div id="view-report" class="view">
+        <div class="header-bar">
+            <button onclick="UI.mostrarTela('view-list')" style="background:none; border:1px solid #ccc">← Voltar</button>
+            <h2 id="report-title">Relatório</h2>
+        </div>
 
-            // Recarrega a página quando o novo Service Worker assume o controle
-            let refreshing = false;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!refreshing) {
-                    window.location.reload();
-                    refreshing = true;
-                }
-            });
-        }
+        <div class="section">
+            <label>Turma</label>
+            <div class="btn-group" id="turmaBtns">
+                <button type="button" onclick="App.updateReportMeta('turma', 'A')" id="btn-turma-A">A</button>
+                <button type="button" onclick="App.updateReportMeta('turma', 'B')" id="btn-turma-B">B</button>
+                <button type="button" onclick="App.updateReportMeta('turma', 'C')" id="btn-turma-C">C</button>
+                <button type="button" onclick="App.updateReportMeta('turma', 'D')" id="btn-turma-D">D</button>
+            </div>
+        </div>
 
-        /** * CORE DO APLICATIVO (Estado e Lógica)
-         */
-        const App = {
-            turmaSelecionada: "",
-            itens: [],
+        <div id="itensContainer"></div>
+        <button class="btn-add" onclick="App.addItem()">+ Adicionar meu item</button>
+        <button class="btn-finish" onclick="App.gerarPDF()">Gerar PDF Coletivo</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // CONFIGURAÇÃO FIREBASE - EXTRAÍDA DA SUA IMAGEM
+        const firebaseConfig = {
+            apiKey: "AIzaSyCokchI_cds7eKr5WuhZ5-ZyLn1Mgllk-U",
+            authDomain: "rota-kamishibai-6fd6d.firebaseapp.com",
+            databaseURL: "https://rota-kamishibai-6fd6d-default-rtdb.firebaseio.com",
+            projectId: "rota-kamishibai-6fd6d",
+            storageBucket: "rota-kamishibai-6fd6d.firebasestorage.app",
+            messagingSenderId: "780267766425",
+            appId: "1:780267766425:web:7815e063da1dbd7f4f2e08",
+            measurementId: "G-B4M5RMG2MK"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // --- CORE LOGIC ---
+        window.App = {
+            user: JSON.parse(localStorage.getItem('rota_user')) || null,
+            currentReportId: null,
             setores: ["Rota do Líder", "Setor 01", "Setor 02", "Setor 03", "Setor 04", "Setor 05"],
 
+            async realizarLogin() {
+                const nome = document.getElementById('login-nome').value;
+                const mat = document.getElementById('login-mat').value;
+                const senha = document.getElementById('login-senha').value;
+
+                if(!nome || !mat || !senha) return alert("Preencha todos os campos");
+
+                const snap = await get(ref(db, 'config/acesso_senha'));
+                if(senha === String(snap.val())) {
+                    this.user = { nome, mat };
+                    localStorage.setItem('rota_user', JSON.stringify(this.user));
+                    UI.mostrarTela('view-list');
+                    this.escutarRelatorios();
+                } else {
+                    alert("Senha incorreta!");
+                }
+            },
+
+            escutarRelatorios() {
+                onValue(ref(db, 'relatorios'), (snapshot) => {
+                    const data = snapshot.val();
+                    const container = document.getElementById('lista-relatorios');
+                    container.innerHTML = "";
+                    const agora = Date.now();
+
+                    for (let id in data) {
+                        // Filtro de 24 horas
+                        if (agora - data[id].timestamp < 86400000) {
+                            container.innerHTML += `
+                                <button class="report-card" onclick="App.abrirRelatorio('${id}')">
+                                    <h3>Rota Turma ${data[id].turma || '?'}</h3>
+                                    <span>Criado em: ${data[id].data}</span>
+                                </button>`;
+                        }
+                    }
+                });
+            },
+
+            criarNovoRelatorio() {
+                const novoRef = push(ref(db, 'relatorios'));
+                const dataStr = new Date().toLocaleDateString('pt-BR');
+                set(novoRef, {
+                    data: dataStr,
+                    timestamp: Date.now(),
+                    turma: '',
+                    itens: {}
+                });
+                this.abrirRelatorio(novoRef.key);
+            },
+
+            abrirRelatorio(id) {
+                this.currentReportId = id;
+                UI.mostrarTela('view-report');
+                
+                onValue(ref(db, `relatorios/${id}`), (snapshot) => {
+                    const report = snapshot.val();
+                    if(!report) return;
+                    
+                    document.getElementById('report-title').innerText = `Rota Turma ${report.turma || '?'}`;
+                    UI.updateTurmaButtons(report.turma);
+                    UI.renderItens(report.itens || {});
+                });
+            },
+
+            updateReportMeta(campo, valor) {
+                update(ref(db, `relatorios/${this.currentReportId}`), { [campo]: valor });
+            },
+
             addItem() {
-                const id = Date.now();
-                const itemObj = { id, setor: '', titulo: '', img: '', responsavel: '', status: '', obs: '' };
-                this.itens.push(itemObj);
-                UI.renderItem(itemObj);
+                const itemRef = push(ref(db, `relatorios/${this.currentReportId}/itens`));
+                set(itemRef, {
+                    id: itemRef.key,
+                    owner: this.user.mat,
+                    responsavel: this.user.nome,
+                    setor: '',
+                    titulo: '',
+                    status: '',
+                    img: '',
+                    obs: ''
+                });
             },
 
-            removeItem(id) {
-                this.itens = this.itens.filter(i => i.id !== id);
-                document.getElementById(`item-${id}`).remove();
+            updateItem(itemId, campo, valor) {
+                update(ref(db, `relatorios/${this.currentReportId}/itens/${itemId}`), { [campo]: valor });
             },
 
-            updateItemValue(id, campo, valor) {
-                const item = this.itens.find(i => i.id === id);
-                if (item) item[campo] = valor;
-            },
-
-            async handleImageUpload(id, input) {
+            async handleImg(itemId, input) {
                 const file = input.files[0];
                 if (!file) return;
-
-                const loading = document.getElementById(`loading-${id}`);
-                loading.style.display = "block";
+                const loader = document.getElementById(`loading-${itemId}`);
+                loader.style.display = "block";
 
                 try {
                     let blob = file;
-                    const name = file.name.toLowerCase();
-
-                    // Conversão HEIC/HEIF
-                    if (name.endsWith(".heic") || name.endsWith(".heif")) {
-                        const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.7 });
-                        blob = Array.isArray(converted) ? converted[0] : converted;
+                    if (file.name.toLowerCase().endsWith(".heic")) {
+                        blob = await heic2any({ blob, toType: "image/jpeg", quality: 0.6 });
                     }
-
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const img = new Image();
                         img.onload = () => {
                             const canvas = document.createElement('canvas');
-                            const maxW = 1000; // Resolução otimizada para PDF
+                            const maxW = 800;
                             const scale = maxW / img.width;
                             canvas.width = maxW;
                             canvas.height = img.height * scale;
-                            
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            
-                            this.updateItemValue(id, 'img', canvas.toDataURL('image/jpeg', 0.8));
-                            loading.style.display = "none";
-                            loading.innerText = "✅ Imagem processada!";
+                            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                            this.updateItem(itemId, 'img', canvas.toDataURL('image/jpeg', 0.7));
+                            loader.innerText = "✅ Pronta";
                         };
                         img.src = e.target.result;
                     };
                     reader.readAsDataURL(blob);
-                } catch (err) {
-                    console.error(err);
-                    alert("Erro ao processar imagem.");
-                    loading.style.display = "none";
-                }
+                } catch (e) { alert("Erro na imagem"); loader.style.display="none"; }
             },
 
             async gerarPDF() {
-                const dataVal = document.getElementById("data").value;
-                if (!dataVal || !this.turmaSelecionada || this.itens.length === 0) {
-                    alert("Por favor, preencha a Data, Turma e adicione pelo menos um item.");
-                    return;
-                }
+                const snap = await get(ref(db, `relatorios/${this.currentReportId}`));
+                const report = snap.val();
+                if(!report.itens) return alert("Nenhum item para gerar PDF");
 
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF("p", "mm", "a4");
-                let firstPage = true;
+                let first = true;
 
-                // Ordenação conforme lista de setores
-                for (const setor of this.setores) {
-                    const itensDoSetor = this.itens.filter(i => i.setor === setor);
+                const sortedItens = Object.values(report.itens).sort((a,b) => 
+                    this.setores.indexOf(a.setor) - this.setores.indexOf(b.setor));
+
+                for (const item of sortedItens) {
+                    if (!item.img) continue;
+                    if (!first) pdf.addPage();
+                    first = false;
+
+                    pdf.setFontSize(16); pdf.text("ROTA KAMISHIBAI", 10, 15);
+                    pdf.setFontSize(10); pdf.text(`Data: ${report.data} | Turma: ${report.turma}`, 140, 15);
+                    pdf.line(10, 18, 200, 18);
                     
-                    for (const item of itensDoSetor) {
-                        if (!item.img) continue;
-
-                        if (!firstPage) pdf.addPage();
-                        firstPage = false;
-
-                        // Header do PDF
-                        pdf.setFontSize(18);
-                        pdf.setFont("helvetica", "bold");
-                        pdf.text("ROTA KAMISHIBAI", 10, 15);
-                        pdf.setFontSize(10);
-                        pdf.setFont("helvetica", "normal");
-                        pdf.text(`Data: ${dataVal} | Turma: ${this.turmaSelecionada}`, 140, 15);
-                        pdf.line(10, 18, 200, 18);
-
-                        // Conteúdo
-                        pdf.setFontSize(14);
-                        pdf.setFont("helvetica", "bold");
-                        pdf.text(`${setor.toUpperCase()} - ${item.titulo || 'Sem Título'}`, 10, 28);
-                        
-                        pdf.addImage(item.img, "JPEG", 10, 35, 190, 110, undefined, 'FAST');
-
-                        pdf.setFontSize(12);
-                        pdf.text(`Responsável: ${item.responsavel || 'Não informado'}`, 10, 155);
-
-                        // Badge de Status
-                        const cor = item.status === "OK" ? [62, 195, 3] : item.status === "N/OK" ? [220, 40, 40] : [244, 187, 49];
-                        pdf.setFillColor(...cor);
-                        pdf.rect(10, 162, 35, 10, "F");
-                        pdf.setTextColor(255, 255, 255);
-                        pdf.text(item.status || "S/S", 15, 169);
-
-                        // Observações
-                        pdf.setTextColor(0, 0, 0);
-                        if (item.obs) {
-                            pdf.setFont("helvetica", "bold");
-                            pdf.text("Observações:", 10, 182);
-                            pdf.setFont("helvetica", "normal");
-                            pdf.setFontSize(10);
-                            pdf.text(item.obs, 10, 188, { maxWidth: 185 });
-                        }
-                    }
+                    pdf.setFontSize(14); pdf.text(`${item.setor} - ${item.titulo}`, 10, 28);
+                    pdf.addImage(item.img, "JPEG", 10, 35, 190, 110);
+                    pdf.text(`Responsável: ${item.responsavel}`, 10, 155);
+                    
+                    const cor = item.status === "OK" ? [62, 195, 3] : [220, 40, 40];
+                    pdf.setFillColor(...cor); pdf.rect(10, 160, 30, 8, "F");
+                    pdf.setTextColor(255); pdf.text(item.status || "S/S", 15, 166);
+                    pdf.setTextColor(0);
+                    if(item.obs) pdf.text(`Obs: ${item.obs}`, 10, 175, {maxWidth: 180});
                 }
+                pdf.save(`Rota_${report.turma}_${report.data}.pdf`);
+            }
+        };
 
-                const fileName = `ROTA_${this.turmaSelecionada}_${dataVal}.pdf`;
-                const pdfBlob = pdf.output("blob");
-                const file = new File([pdfBlob], fileName, { type: "application/pdf" });
+        window.UI = {
+            mostrarTela(id) {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById(id).classList.add('active');
+            },
 
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try {
-                        await navigator.share({ files: [file], title: 'Relatório Kamishibai' });
-                    } catch (e) { pdf.save(fileName); }
-                } else {
-                    pdf.save(fileName);
+            updateTurmaButtons(turma) {
+                document.querySelectorAll('#turmaBtns button').forEach(b => {
+                    b.classList.toggle('active-turma', b.innerText === turma);
+                });
+            },
+
+            renderItens(itens) {
+                const container = document.getElementById('itensContainer');
+                container.innerHTML = "";
+                for (let id in itens) {
+                    const item = itens[id];
+                    const isOwner = String(item.owner) === String(App.user.mat);
+                    const disabled = !isOwner ? 'disabled' : '';
+
+                    container.innerHTML += `
+                        <div class="section">
+                            <span class="owner-tag">Por: ${item.responsavel}</span>
+                            <select ${disabled} onchange="App.updateItem('${id}', 'setor', this.value)">
+                                <option value="">Setor</option>
+                                ${App.setores.map(s => `<option value="${s}" ${item.setor===s?'selected':''}>${s}</option>`).join('')}
+                            </select>
+                            <input type="text" placeholder="Título" value="${item.titulo}" ${disabled} onchange="App.updateItem('${id}', 'titulo', this.value)">
+                            
+                            ${isOwner ? `
+                                <label>Foto</label>
+                                <input type="file" accept="image/*" onchange="App.handleImg('${id}', this)">
+                                <div id="loading-${id}" class="loading-msg">Processando...</div>
+                            ` : item.img ? '<p style="font-size:12px; color:green">📷 Foto anexada</p>' : '<p style="font-size:12px; color:red">⚠️ Sem foto</p>'}
+
+                            <div class="btn-group">
+                                <button class="${item.status==='OK'?'status-ok':''}" ${disabled} onclick="App.updateItem('${id}', 'status', 'OK')">OK</button>
+                                <button class="${item.status==='N/OK'?'status-nok':''}" ${disabled} onclick="App.updateItem('${id}', 'status', 'N/OK')">N/OK</button>
+                            </div>
+                            <textarea placeholder="Obs" ${disabled} onchange="App.updateItem('${id}', 'obs', this.value)">${item.obs}</textarea>
+                            ${isOwner ? `<button class="remove-btn" onclick="remove(ref(db, 'relatorios/${App.currentReportId}/itens/${id}'))">Remover</button>` : ''}
+                        </div>`;
                 }
             }
         };
 
-        /** * INTERFACE DO USUÁRIO (Manipulação de DOM)
-         */
-        const UI = {
-            selectTurma(btn, valor) {
-                document.querySelectorAll('#turmaBtns button').forEach(b => b.classList.remove('active-turma'));
-                btn.classList.add('active-turma');
-                App.turmaSelecionada = valor;
-            },
-
-            setStatus(id, status, btn) {
-                App.updateItemValue(id, 'status', status);
-                const botoes = btn.parentElement.querySelectorAll('button');
-                botoes.forEach(b => b.classList.remove('status-ok', 'status-nok', 'status-att'));
-                
-                if (status === 'OK') btn.classList.add('status-ok');
-                else if (status === 'N/OK') btn.classList.add('status-nok');
-                else if (status === 'ATT') btn.classList.add('status-att');
-            },
-
-            renderItem(item) {
-                const setorOptions = App.setores.map(s => `<option value="${s}">${s}</option>`).join('');
-                const html = `
-                    <div class="section" id="item-${item.id}">
-                        <select onchange="App.updateItemValue(${item.id}, 'setor', this.value)">
-                            <option value="">Selecione o Setor</option>
-                            ${setorOptions}
-                        </select>
-                        
-                        <input type="text" placeholder="Título da Verificação" onchange="App.updateItemValue(${item.id}, 'titulo', this.value)">
-                        
-                        <label>Foto (Suporta JPG, PNG, HEIC)</label>
-                        <input type="file" accept="image/*" onchange="App.handleImageUpload(${item.id}, this)">
-                        <div id="loading-${item.id}" class="loading-msg">Processando imagem...</div>
-                        
-                        <input type="text" placeholder="Nome do Responsável" onchange="App.updateItemValue(${item.id}, 'responsavel', this.value)">
-                        
-                        <div class="btn-group">
-                            <button type="button" onclick="UI.setStatus(${item.id}, 'OK', this)">OK</button>
-                            <button type="button" onclick="UI.setStatus(${item.id}, 'N/OK', this)">N/OK</button>
-                            <button type="button" onclick="UI.setStatus(${item.id}, 'ATT', this)">AÇÃO</button>
-                        </div>
-                        
-                        <textarea placeholder="Observações e detalhes..." rows="3" onchange="App.updateItemValue(${item.id}, 'obs', this.value)"></textarea>
-                        
-                        <button type="button" class="remove-btn" onclick="App.removeItem(${item.id})">Remover este item</button>
-                    </div>`;
-                document.getElementById('itensContainer').insertAdjacentHTML('beforeend', html);
-            }
-        };
+        // Auto-login se já existir usuário
+        if(App.user) { 
+            UI.mostrarTela('view-list'); 
+            App.escutarRelatorios(); 
+        }
     </script>
 </body>
 </html>

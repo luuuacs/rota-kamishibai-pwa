@@ -3,7 +3,7 @@
  * Versão: 1.0.1 (Mude este número para forçar atualização nos clientes)
  */
 
-const CACHE_NAME = "rota-kamishibai-v1.0.1";
+const CACHE_NAME = "rota-kamishibai-v1.0.2";
 
 // Arquivos essenciais para funcionamento offline
 const STATIC_ASSETS = [
@@ -77,3 +77,4 @@ self.addEventListener("fetch", (event) => {
         })
     );
 });
+

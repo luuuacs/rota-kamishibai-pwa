@@ -38,10 +38,21 @@
         .section { background: var(--card-bg); padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
         
         /* Lista de Relatórios */
-        .report-card { width: 100%; text-align: left; padding: 20px; margin-bottom: 10px; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; }
+        .report-card { 
+            width: 100%; text-align: left; padding: 20px; margin-bottom: 10px; 
+            background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; 
+            position: relative; 
+        }
         .report-card:hover { border-color: var(--primary); }
         .report-card h3 { margin: 0 0 5px 0; font-size: 1rem; }
         .report-card span { font-size: 0.8rem; color: #666; }
+
+        /* Botão de Lixeira (Admin) */
+        .trash-btn {
+            position: absolute; right: 15px; top: 20px;
+            background: #ffebeb; color: red; border: 1px solid red;
+            border-radius: 4px; padding: 5px 10px; z-index: 10;
+        }
 
         /* Estilos de Form */
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
@@ -111,7 +122,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, push, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // CONFIGURAÇÃO FIREBASE - EXTRAÍDA DA SUA IMAGEM
         const firebaseConfig = {
             apiKey: "AIzaSyCokchI_cds7eKr5WuhZ5-ZyLn1Mgllk-U",
             authDomain: "rota-kamishibai-6fd6d.firebaseapp.com",
@@ -156,18 +166,28 @@
                     const container = document.getElementById('lista-relatorios');
                     container.innerHTML = "";
                     const agora = Date.now();
+                    const isAdmin = this.user && String(this.user.mat) === "81034524";
 
                     for (let id in data) {
-                        // Filtro de 24 horas
                         if (agora - data[id].timestamp < 86400000) {
+                            const btnDelete = isAdmin ? 
+                                `<button class="trash-btn" onclick="event.stopPropagation(); App.deletarRelatorio('${id}')">🗑️</button>` : '';
+
                             container.innerHTML += `
-                                <button class="report-card" onclick="App.abrirRelatorio('${id}')">
+                                <div class="report-card" onclick="App.abrirRelatorio('${id}')">
                                     <h3>Rota Turma ${data[id].turma || '?'}</h3>
                                     <span>Criado em: ${data[id].data}</span>
-                                </button>`;
+                                    ${btnDelete}
+                                </div>`;
                         }
                     }
                 });
+            },
+
+            deletarRelatorio(id) {
+                if(confirm("ATENÇÃO: Deseja apagar este relatório e todos os itens dele?")) {
+                    remove(ref(db, `relatorios/${id}`));
+                }
             },
 
             criarNovoRelatorio() {
@@ -188,7 +208,10 @@
                 
                 onValue(ref(db, `relatorios/${id}`), (snapshot) => {
                     const report = snapshot.val();
-                    if(!report) return;
+                    if(!report) {
+                        UI.mostrarTela('view-list');
+                        return;
+                    } 
                     
                     document.getElementById('report-title').innerText = `Rota Turma ${report.turma || '?'}`;
                     UI.updateTurmaButtons(report.turma);
@@ -212,6 +235,12 @@
                     img: '',
                     obs: ''
                 });
+            },
+
+            deleteItem(itemId) {
+                if(confirm('Tem certeza que deseja apagar este item?')) {
+                    remove(ref(db, `relatorios/${this.currentReportId}/itens/${itemId}`));
+                }
             },
 
             updateItem(itemId, campo, valor) {
@@ -240,12 +269,9 @@
                         canvas.width = maxW;
                         canvas.height = img.height * scale;
                         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                
+                        
                         const base64 = canvas.toDataURL('image/jpeg', 0.7);
-                        // Salva no Firebase
                         App.updateItem(itemId, 'img', base64);
-                
-                        // Feedback imediato na tela
                         loader.innerHTML = "<b style='color:green'>✅ Foto salva!</b>";
                     };
                     img.src = e.target.result;
@@ -266,20 +292,52 @@
                 const pdf = new jsPDF("p", "mm", "a4");
                 let first = true;
 
-                const sortedItens = Object.values(report.itens).sort((a,b) => 
-                    this.setores.indexOf(a.setor) - this.setores.indexOf(b.setor));
+                // Ordenação OBRIGATÓRIA por Setor para o PDF
+                const sortedItens = Object.values(report.itens).sort((a,b) => {
+                    const idxA = App.setores.indexOf(a.setor) === -1 ? 999 : App.setores.indexOf(a.setor);
+                    const idxB = App.setores.indexOf(b.setor) === -1 ? 999 : App.setores.indexOf(b.setor);
+                    return idxA - idxB;
+                });
 
                 for (const item of sortedItens) {
                     if (!item.img) continue;
                     if (!first) pdf.addPage();
                     first = false;
 
+                    // Cabeçalho
                     pdf.setFontSize(16); pdf.text("ROTA KAMISHIBAI", 10, 15);
                     pdf.setFontSize(10); pdf.text(`Data: ${report.data} | Turma: ${report.turma}`, 140, 15);
                     pdf.line(10, 18, 200, 18);
                     
-                    pdf.setFontSize(14); pdf.text(`${item.setor} - ${item.titulo}`, 10, 28);
-                    pdf.addImage(item.img, "JPEG", 10, 35, 190, 110);
+                    pdf.setFontSize(14); pdf.text(`${item.setor || 'Setor não informado'} - ${item.titulo}`, 10, 28);
+                    
+                    // --- NOVA LÓGICA DE PROPORÇÃO DE IMAGEM ---
+                    const imgProps = pdf.getImageProperties(item.img);
+                    const pdfPageWidth = 210;
+                    const margin = 10;
+                    const maxW = 190;
+                    const maxH = 110; // Limite vertical
+                    
+                    const ratio = imgProps.width / imgProps.height;
+                    let renderW, renderH;
+
+                    // Calcula dimensões mantendo proporção
+                    if (maxW / ratio <= maxH) {
+                        // Limitado pela largura
+                        renderW = maxW;
+                        renderH = maxW / ratio;
+                    } else {
+                        // Limitado pela altura (caso de fotos verticais)
+                        renderH = maxH;
+                        renderW = maxH * ratio;
+                    }
+
+                    // Centraliza a imagem horizontalmente
+                    const x = (pdfPageWidth - renderW) / 2;
+                    pdf.addImage(item.img, "JPEG", x, 35, renderW, renderH);
+                    // ------------------------------------------
+
+                    // Informações inferiores
                     pdf.text(`Responsável: ${item.responsavel}`, 10, 155);
                     
                     const cor = item.status === "OK" ? [62, 195, 3] : [220, 40, 40];
@@ -308,8 +366,12 @@
                 const container = document.getElementById('itensContainer');
                 container.innerHTML = "";
     
-                const itensArray = Object.values(itens).sort((a,b) => 
-                    App.setores.indexOf(a.setor) - App.setores.indexOf(b.setor));
+                // Ordenação visual: Itens sem setor no final, mas ordenados por criação
+                const itensArray = Object.values(itens).sort((a,b) => {
+                    const idxA = App.setores.indexOf(a.setor) === -1 ? 999 : App.setores.indexOf(a.setor);
+                    const idxB = App.setores.indexOf(b.setor) === -1 ? 999 : App.setores.indexOf(b.setor);
+                    return idxA - idxB || a.id.localeCompare(b.id);
+                });
 
                 itensArray.forEach(item => {
                     const id = item.id;
@@ -321,14 +383,14 @@
                         <div class="section">
                             <span class="owner-tag">Resp: ${item.responsavel}</span>
                             <select ${disabled} onchange="App.updateItem('${id}', 'setor', this.value)">
-                                <option value="">Setor</option>
+                                <option value="">Selecione o Setor...</option>
                                 ${App.setores.map(s => `<option value="${s}" ${item.setor===s?'selected':''}>${s}</option>`).join('')}
                             </select>
                             <input type="text" placeholder="Título" value="${item.titulo}" ${disabled} onchange="App.updateItem('${id}', 'titulo', this.value)">
-                
+                            
                             <div style="margin: 10px 0; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: ${temFoto ? '#f0fff0' : '#fafafa'}">
                                 <label style="font-size:13px">${temFoto ? '✅ Foto no Sistema' : '📷 Adicionar Foto'}</label>
-                    
+                                
                                 ${temFoto ? `
                                     <div style="margin-top:8px; display:flex; align-items:center; gap:10px">
                                         <img src="${item.img}" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #ddd">
@@ -338,7 +400,7 @@
 
                                 ${isOwner ? `
                                     <input type="file" id="file-${id}" accept="image/*" 
-                                        style="${temFoto ? 'display:none' : 'display:block'}; margin-top:8px"
+                                           style="${temFoto ? 'display:none' : 'display:block'}; margin-top:8px"
                                            onchange="App.handleImg('${id}', this)">
                                 ` : ''}
                                 <div id="loading-${id}" class="loading-msg"></div>
@@ -349,13 +411,13 @@
                                 <button class="${item.status==='N/OK'?'status-nok':''}" ${disabled} onclick="App.updateItem('${id}', 'status', 'N/OK')">N/OK</button>
                             </div>
                             <textarea placeholder="Obs" ${disabled} onchange="App.updateItem('${id}', 'obs', this.value)">${item.obs || ''}</textarea>
-                            ${isOwner ? `<button class="remove-btn" onclick="if(confirm('Apagar item?')) remove(ref(db, 'relatorios/${App.currentReportId}/itens/${id}'))">Remover</button>` : ''}
+                            
+                            ${isOwner ? `<button class="remove-btn" onclick="App.deleteItem('${id}')">Remover Item</button>` : ''}
                         </div>`;
                 });
             }
         };
 
-        // Auto-login se já existir usuário
         if(App.user) { 
             UI.mostrarTela('view-list'); 
             App.escutarRelatorios(); 
@@ -363,4 +425,3 @@
     </script>
 </body>
 </html>
-

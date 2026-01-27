@@ -294,7 +294,7 @@
                 let first = true;
 
                 // --- ORDENAÇÃO PARA O PDF (Mantém por Setor) ---
-                const sortedItens = Object.values(report.itens).sort((a,b) => {
+                const sortedItens = [...Object.values(report.itens)].sort((a,b) => {
                     const idxA = App.setores.indexOf(a.setor) === -1 ? 999 : App.setores.indexOf(a.setor);
                     const idxB = App.setores.indexOf(b.setor) === -1 ? 999 : App.setores.indexOf(b.setor);
                     return idxA - idxB;
@@ -417,4 +417,5 @@
     </script>
 </body>
 </html>
+
 

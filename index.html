@@ -1,209 +1,352 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rota Kamishibai</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#444444">
 
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js');
-}
-</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
 
-<title>Rota Kamishibai</title>
+    <style>
+        /* Variáveis de Estilo para facilitar manutenção */
+        :root {
+            --bg-color: #f4f4f4;
+            --card-bg: #ffffff;
+            --border-color: #dddddd;
+            --text-dark: #333333;
+            --primary: #444444;
+            --secondary: #000000;
+            
+            /* Cores de Status */
+            --status-ok: #3ec303;
+            --status-nok: #DC2828;
+            --status-att: #f4bb31;
+            --status-remove: #ffeded;
+            --status-remove-border: #ffcccc;
+        }
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-<style>
-* { box-sizing: border-box; }
-body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 15px; }
-h2 { margin-top: 0; text-align: center; }
-.section { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ddd; }
-button { padding: 10px; margin: 5px 3px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-.btn-group { display: flex; justify-content: space-between; }
-.btn-group button { flex: 1; background: #eee; color: #333; border: 1px solid #ccc; }
-button.status-ok { background-color: #3ec303 !important; color: white !important; }
-button.status-nok { background-color: #DC2828 !important; color: white !important; }
-button.status-att { background-color: #f4bb31 !important; color: white !important; }
-.active-turma { outline: 3px solid black; background: #333 !important; color: white !important; }
-input, textarea, select { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-.add-btn { width: 100%; background: #444; color: white; margin-top: 10px; }
-.finish-btn { width: 100%; background: #000; color: white; font-size: 18px; margin-top: 20px; padding: 15px; }
-.remove-btn { background: #ffeded; color: red; width: 100%; font-size: 12px; margin-top: 10px; border: 1px solid #ffcccc; }
-.loading-msg { font-size: 12px; color: #666; font-style: italic; display: none; }
-</style>
+        body { 
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif; 
+            background: var(--bg-color); 
+            margin: 0; 
+            padding: 15px; 
+            color: var(--text-dark);
+        }
+
+        h2 { margin-top: 0; text-align: center; color: var(--secondary); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Estrutura de Seções */
+        .section { 
+            background: var(--card-bg); 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 8px; 
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+
+        /* Inputs e Botões */
+        input, textarea, select { 
+            width: 100%; 
+            padding: 12px; 
+            margin-top: 5px; 
+            margin-bottom: 12px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            font-size: 16px; 
+            outline: none;
+        }
+
+        button { 
+            padding: 12px; 
+            margin: 5px 2px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        button:active { transform: scale(0.98); }
+
+        .btn-group { display: flex; gap: 8px; justify-content: space-between; margin-bottom: 10px; }
+        .btn-group button { flex: 1; background: #eee; color: var(--text-dark); border: 1px solid #ccc; }
+
+        /* Estados Ativos e Cores de Status */
+        .active-turma { background: var(--secondary) !important; color: white !important; box-shadow: 0 0 0 2px black; }
+        .status-ok { background-color: var(--status-ok) !important; color: white !important; }
+        .status-nok { background-color: var(--status-nok) !important; color: white !important; }
+        .status-att { background-color: var(--status-att) !important; color: white !important; }
+
+        /* Botões de Ação */
+        .add-btn { width: 100%; background: var(--primary); color: white; margin-top: 10px; font-size: 16px; }
+        .finish-btn { width: 100%; background: var(--secondary); color: white; font-size: 18px; margin-top: 20px; padding: 18px; }
+        .remove-btn { background: var(--status-remove); color: #d32f2f; width: 100%; font-size: 13px; margin-top: 10px; border: 1px solid var(--status-remove-border); }
+
+        .loading-msg { font-size: 13px; color: #666; font-style: italic; display: none; margin-bottom: 10px; text-align: center; }
+        
+        /* Notificação de Atualização */
+        #update-toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #333; color: white; padding: 15px 25px; border-radius: 30px;
+            display: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            align-items: center; gap: 10px;
+        }
+    </style>
 </head>
 
 <body>
 
-<h2>ROTA KAMISHIBAI</h2>
+    <h2>Rota Kamishibai</h2>
 
-<div class="section">
-  <label><strong>Data</strong></label>
-  <input type="date" id="data">
-  <label><strong>Turma</strong></label>
-  <div class="btn-group" id="turmaBtns">
-    <button onclick="selectTurma(this,'A')">A</button>
-    <button onclick="selectTurma(this,'B')">B</button>
-    <button onclick="selectTurma(this,'C')">C</button>
-    <button onclick="selectTurma(this,'D')">D</button>
-  </div>
-</div>
+    <div class="section">
+        <label for="data">Data do Relatório</label>
+        <input type="date" id="data">
+        
+        <label>Selecione a Turma</label>
+        <div class="btn-group" id="turmaBtns">
+            <button type="button" onclick="UI.selectTurma(this, 'A')">A</button>
+            <button type="button" onclick="UI.selectTurma(this, 'B')">B</button>
+            <button type="button" onclick="UI.selectTurma(this, 'C')">C</button>
+            <button type="button" onclick="UI.selectTurma(this, 'D')">D</button>
+        </div>
+    </div>
 
-<div id="itens"></div>
-<button class="add-btn" onclick="addItem()">+ Adicionar item</button>
-<br>
-<button class="finish-btn" onclick="gerarPDF()">Finalizar e Abrir PDF</button>
+    <div id="itensContainer"></div>
 
-<script>
-let turmaSelecionada = "";
-let itens = [];
+    <button type="button" class="add-btn" onclick="App.addItem()">+ Adicionar Novo Item</button>
+    <button type="button" class="finish-btn" onclick="App.gerarPDF()">Finalizar e Compartilhar PDF</button>
 
-function selectTurma(btn, valor) {
-  document.querySelectorAll('#turmaBtns button').forEach(b => b.classList.remove('active-turma'));
-  btn.classList.add('active-turma');
-  turmaSelecionada = valor;
-}
+    <div id="update-toast">
+        <span>Nova versão disponível!</span>
+        <button onclick="window.location.reload()" style="background: #fff; color: #000; padding: 5px 10px; margin: 0">Atualizar</button>
+    </div>
 
-function addItem() {
-  const id = Date.now();
-  const setores = ["Rota do Líder","Setor 01","Setor 02","Setor 03","Setor 04","Setor 05"];
-  const setorOptions = setores.map(s => `<option value="${s}">${s}</option>`).join('');
-  const html = `
-    <div class="section" id="item-${id}">
-      <select onchange="updateItem(${id}, 'setor', this.value)"><option value="">Selecione o Setor</option>${setorOptions}</select>
-      <input type="text" placeholder="Título" onchange="updateItem(${id}, 'titulo', this.value)">
-      <label style="font-size:12px">Foto (JPG, PNG, HEIC, HEIF)</label>
-      <input type="file" accept="image/*" onchange="handleImg(${id}, this)">
-      <div id="loading-${id}" class="loading-msg">Processando imagem... aguarde.</div>
-      <input type="text" placeholder="Responsável" onchange="updateItem(${id}, 'responsavel', this.value)">
-      <div class="btn-group">
-        <button onclick="setStatus(${id}, 'OK', this)">OK</button>
-        <button onclick="setStatus(${id}, 'N/OK', this)">N/OK</button>
-        <button onclick="setStatus(${id}, 'ATT', this)">ATT</button>
-      </div>
-      <textarea placeholder="Observações" onchange="updateItem(${id}, 'obs', this.value)"></textarea>
-      <button class="remove-btn" onclick="removeItem(${id})">Remover item</button>
-    </div>`;
-  document.getElementById('itens').insertAdjacentHTML('beforeend', html);
-  itens.push({ id, setor: '', titulo: '', img: '', responsavel: '', status: '', obs: '' });
-}
+    <script>
+        /** * LÓGICA DE SERVICE WORKER E ATUALIZAÇÃO AUTOMÁTICA 
+         */
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').then(reg => {
+                    // Verifica se já existe um novo worker esperando
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                document.getElementById('update-toast').style.display = 'flex';
+                            }
+                        });
+                    });
+                });
+            });
 
-function removeItem(id) {
-  document.getElementById(`item-${id}`).remove();
-  itens = itens.filter(i => i.id !== id);
-}
+            // Recarrega a página quando o novo Service Worker assume o controle
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    window.location.reload();
+                    refreshing = true;
+                }
+            });
+        }
 
-function updateItem(id, campo, valor) {
-  const item = itens.find(i => i.id === id);
-  if (item) item[campo] = valor;
-}
+        /** * CORE DO APLICATIVO (Estado e Lógica)
+         */
+        const App = {
+            turmaSelecionada: "",
+            itens: [],
+            setores: ["Rota do Líder", "Setor 01", "Setor 02", "Setor 03", "Setor 04", "Setor 05"],
 
-function setStatus(id, status, btn) {
-  const item = itens.find(i => i.id === id);
-  if (item) item.status = status;
-  const botoes = btn.parentElement.querySelectorAll('button');
-  botoes.forEach(b => b.classList.remove('status-ok', 'status-nok', 'status-att'));
-  if (status === 'OK') btn.classList.add('status-ok');
-  else if (status === 'N/OK') btn.classList.add('status-nok');
-  else if (status === 'ATT') btn.classList.add('status-att');
-}
+            addItem() {
+                const id = Date.now();
+                const itemObj = { id, setor: '', titulo: '', img: '', responsavel: '', status: '', obs: '' };
+                this.itens.push(itemObj);
+                UI.renderItem(itemObj);
+            },
 
-async function handleImg(id, input) {
-  const file = input.files[0];
-  if (!file) return;
-  
-  const loading = document.getElementById(`loading-${id}`);
-  loading.style.display = "block";
+            removeItem(id) {
+                this.itens = this.itens.filter(i => i.id !== id);
+                document.getElementById(`item-${id}`).remove();
+            },
 
-  try {
-    let blob = file;
-    const name = file.name.toLowerCase();
-    // Suporte para HEIC e HEIF
-    if (name.endsWith(".heic") || name.endsWith(".heif")) {
-      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.7 });
-      blob = Array.isArray(converted) ? converted[0] : converted;
-    }
+            updateItemValue(id, campo, valor) {
+                const item = this.itens.find(i => i.id === id);
+                if (item) item[campo] = valor;
+            },
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        const maxW = 1000;
-        const scale = maxW / img.width;
-        canvas.width = maxW;
-        canvas.height = img.height * scale;
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        updateItem(id, 'img', canvas.toDataURL('image/jpeg', 0.8));
-        loading.style.display = "none";
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(blob);
-  } catch (err) {
-    alert("Erro ao processar imagem. Tente outro formato.");
-    loading.style.display = "none";
-  }
-}
+            async handleImageUpload(id, input) {
+                const file = input.files[0];
+                if (!file) return;
 
-function drawHeader(pdf, data, turma) {
-  pdf.setFontSize(18);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("ROTA KAMISHIBAI", 10, 12);
-  pdf.setFontSize(10);
-  pdf.text(`Data: ${data} | Turma: ${turma}`, 140, 12);
-  pdf.line(10, 15, 200, 15);
-}
+                const loading = document.getElementById(`loading-${id}`);
+                loading.style.display = "block";
 
-async function gerarPDF() {
-  const dataVal = document.getElementById("data").value;
-  if (!dataVal || !turmaSelecionada || itens.length === 0) {
-    alert("Preencha Data, Turma e adicione itens.");
-    return;
-  }
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF("p","mm","a4");
-  const ordemSetores = ["Rota do Líder","Setor 01","Setor 02","Setor 03","Setor 04","Setor 05"];
-  let first = true;
+                try {
+                    let blob = file;
+                    const name = file.name.toLowerCase();
 
-  for (let setor of ordemSetores) {
-    for (let item of itens.filter(i=>i.setor===setor)) {
-      if (!item.img) continue;
-      if (!first) pdf.addPage();
-      first = false;
-      drawHeader(pdf, dataVal, turmaSelecionada);
-      pdf.setFontSize(14);
-      pdf.setFont("helvetica", "bold");
-      pdf.text(`${setor} - ${item.titulo}`, 10, 25);
-      pdf.addImage(item.img, "JPEG", 10, 30, 190, 100, undefined, 'FAST');
-      pdf.setFontSize(12);
-      pdf.text(`Responsável: ${item.responsavel || '---'}`, 10, 140);
-      let cor = item.status==="OK" ? [62,195,3] : item.status==="N/OK" ? [220,40,40] : [244,187,49];
-      pdf.setFillColor(...cor);
-      pdf.rect(10, 150, 40, 10, "F");
-      pdf.setTextColor(255,255,255);
-      pdf.text(item.status || "S/S", 15, 157);
-      pdf.setTextColor(0,0,0);
-      if (item.obs) {
-        pdf.text("Obs:", 10, 170);
-        pdf.setFontSize(10);
-        pdf.text(item.obs, 10, 176, {maxWidth: 185});
-      }
-    }
-  }
+                    // Conversão HEIC/HEIF
+                    if (name.endsWith(".heic") || name.endsWith(".heif")) {
+                        const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.7 });
+                        blob = Array.isArray(converted) ? converted[0] : converted;
+                    }
 
-  const pdfBlob = pdf.output("blob");
-  const fileName = `ROTA_${turmaSelecionada}_${dataVal}.pdf`;
-  const file = new File([pdfBlob], fileName, { type: "application/pdf" });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    await navigator.share({ files: [file], title: 'Relatório' }).catch(() => pdf.save(fileName));
-  } else {
-    pdf.save(fileName);
-  }
-}
-</script>
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const maxW = 1000; // Resolução otimizada para PDF
+                            const scale = maxW / img.width;
+                            canvas.width = maxW;
+                            canvas.height = img.height * scale;
+                            
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            
+                            this.updateItemValue(id, 'img', canvas.toDataURL('image/jpeg', 0.8));
+                            loading.style.display = "none";
+                            loading.innerText = "✅ Imagem processada!";
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(blob);
+                } catch (err) {
+                    console.error(err);
+                    alert("Erro ao processar imagem.");
+                    loading.style.display = "none";
+                }
+            },
+
+            async gerarPDF() {
+                const dataVal = document.getElementById("data").value;
+                if (!dataVal || !this.turmaSelecionada || this.itens.length === 0) {
+                    alert("Por favor, preencha a Data, Turma e adicione pelo menos um item.");
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF("p", "mm", "a4");
+                let firstPage = true;
+
+                // Ordenação conforme lista de setores
+                for (const setor of this.setores) {
+                    const itensDoSetor = this.itens.filter(i => i.setor === setor);
+                    
+                    for (const item of itensDoSetor) {
+                        if (!item.img) continue;
+
+                        if (!firstPage) pdf.addPage();
+                        firstPage = false;
+
+                        // Header do PDF
+                        pdf.setFontSize(18);
+                        pdf.setFont("helvetica", "bold");
+                        pdf.text("ROTA KAMISHIBAI", 10, 15);
+                        pdf.setFontSize(10);
+                        pdf.setFont("helvetica", "normal");
+                        pdf.text(`Data: ${dataVal} | Turma: ${this.turmaSelecionada}`, 140, 15);
+                        pdf.line(10, 18, 200, 18);
+
+                        // Conteúdo
+                        pdf.setFontSize(14);
+                        pdf.setFont("helvetica", "bold");
+                        pdf.text(`${setor.toUpperCase()} - ${item.titulo || 'Sem Título'}`, 10, 28);
+                        
+                        pdf.addImage(item.img, "JPEG", 10, 35, 190, 110, undefined, 'FAST');
+
+                        pdf.setFontSize(12);
+                        pdf.text(`Responsável: ${item.responsavel || 'Não informado'}`, 10, 155);
+
+                        // Badge de Status
+                        const cor = item.status === "OK" ? [62, 195, 3] : item.status === "N/OK" ? [220, 40, 40] : [244, 187, 49];
+                        pdf.setFillColor(...cor);
+                        pdf.rect(10, 162, 35, 10, "F");
+                        pdf.setTextColor(255, 255, 255);
+                        pdf.text(item.status || "S/S", 15, 169);
+
+                        // Observações
+                        pdf.setTextColor(0, 0, 0);
+                        if (item.obs) {
+                            pdf.setFont("helvetica", "bold");
+                            pdf.text("Observações:", 10, 182);
+                            pdf.setFont("helvetica", "normal");
+                            pdf.setFontSize(10);
+                            pdf.text(item.obs, 10, 188, { maxWidth: 185 });
+                        }
+                    }
+                }
+
+                const fileName = `ROTA_${this.turmaSelecionada}_${dataVal}.pdf`;
+                const pdfBlob = pdf.output("blob");
+                const file = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({ files: [file], title: 'Relatório Kamishibai' });
+                    } catch (e) { pdf.save(fileName); }
+                } else {
+                    pdf.save(fileName);
+                }
+            }
+        };
+
+        /** * INTERFACE DO USUÁRIO (Manipulação de DOM)
+         */
+        const UI = {
+            selectTurma(btn, valor) {
+                document.querySelectorAll('#turmaBtns button').forEach(b => b.classList.remove('active-turma'));
+                btn.classList.add('active-turma');
+                App.turmaSelecionada = valor;
+            },
+
+            setStatus(id, status, btn) {
+                App.updateItemValue(id, 'status', status);
+                const botoes = btn.parentElement.querySelectorAll('button');
+                botoes.forEach(b => b.classList.remove('status-ok', 'status-nok', 'status-att'));
+                
+                if (status === 'OK') btn.classList.add('status-ok');
+                else if (status === 'N/OK') btn.classList.add('status-nok');
+                else if (status === 'ATT') btn.classList.add('status-att');
+            },
+
+            renderItem(item) {
+                const setorOptions = App.setores.map(s => `<option value="${s}">${s}</option>`).join('');
+                const html = `
+                    <div class="section" id="item-${item.id}">
+                        <select onchange="App.updateItemValue(${item.id}, 'setor', this.value)">
+                            <option value="">Selecione o Setor</option>
+                            ${setorOptions}
+                        </select>
+                        
+                        <input type="text" placeholder="Título da Verificação" onchange="App.updateItemValue(${item.id}, 'titulo', this.value)">
+                        
+                        <label>Foto (Suporta JPG, PNG, HEIC)</label>
+                        <input type="file" accept="image/*" onchange="App.handleImageUpload(${item.id}, this)">
+                        <div id="loading-${item.id}" class="loading-msg">Processando imagem...</div>
+                        
+                        <input type="text" placeholder="Nome do Responsável" onchange="App.updateItemValue(${item.id}, 'responsavel', this.value)">
+                        
+                        <div class="btn-group">
+                            <button type="button" onclick="UI.setStatus(${item.id}, 'OK', this)">OK</button>
+                            <button type="button" onclick="UI.setStatus(${item.id}, 'N/OK', this)">N/OK</button>
+                            <button type="button" onclick="UI.setStatus(${item.id}, 'ATT', this)">AÇÃO</button>
+                        </div>
+                        
+                        <textarea placeholder="Observações e detalhes..." rows="3" onchange="App.updateItemValue(${item.id}, 'obs', this.value)"></textarea>
+                        
+                        <button type="button" class="remove-btn" onclick="App.removeItem(${item.id})">Remover este item</button>
+                    </div>`;
+                document.getElementById('itensContainer').insertAdjacentHTML('beforeend', html);
+            }
+        };
+    </script>
 </body>
 </html>

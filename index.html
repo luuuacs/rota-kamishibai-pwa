@@ -292,7 +292,7 @@
                 const pdf = new jsPDF("p", "mm", "a4");
                 let first = true;
 
-                // Ordenação OBRIGATÓRIA por Setor para o PDF
+                // --- ORDENAÇÃO PARA O PDF (Mantém por Setor) ---
                 const sortedItens = Object.values(report.itens).sort((a,b) => {
                     const idxA = App.setores.indexOf(a.setor) === -1 ? 999 : App.setores.indexOf(a.setor);
                     const idxB = App.setores.indexOf(b.setor) === -1 ? 999 : App.setores.indexOf(b.setor);
@@ -304,40 +304,32 @@
                     if (!first) pdf.addPage();
                     first = false;
 
-                    // Cabeçalho
                     pdf.setFontSize(16); pdf.text("ROTA KAMISHIBAI", 10, 15);
                     pdf.setFontSize(10); pdf.text(`Data: ${report.data} | Turma: ${report.turma}`, 140, 15);
                     pdf.line(10, 18, 200, 18);
                     
                     pdf.setFontSize(14); pdf.text(`${item.setor || 'Setor não informado'} - ${item.titulo}`, 10, 28);
                     
-                    // --- NOVA LÓGICA DE PROPORÇÃO DE IMAGEM ---
+                    // --- CORREÇÃO DE IMAGEM NO PDF ---
                     const imgProps = pdf.getImageProperties(item.img);
                     const pdfPageWidth = 210;
-                    const margin = 10;
                     const maxW = 190;
-                    const maxH = 110; // Limite vertical
+                    const maxH = 110; 
                     
                     const ratio = imgProps.width / imgProps.height;
                     let renderW, renderH;
 
-                    // Calcula dimensões mantendo proporção
                     if (maxW / ratio <= maxH) {
-                        // Limitado pela largura
                         renderW = maxW;
                         renderH = maxW / ratio;
                     } else {
-                        // Limitado pela altura (caso de fotos verticais)
                         renderH = maxH;
                         renderW = maxH * ratio;
                     }
 
-                    // Centraliza a imagem horizontalmente
                     const x = (pdfPageWidth - renderW) / 2;
                     pdf.addImage(item.img, "JPEG", x, 35, renderW, renderH);
-                    // ------------------------------------------
-
-                    // Informações inferiores
+                    
                     pdf.text(`Responsável: ${item.responsavel}`, 10, 155);
                     
                     const cor = item.status === "OK" ? [62, 195, 3] : [220, 40, 40];
@@ -366,11 +358,10 @@
                 const container = document.getElementById('itensContainer');
                 container.innerHTML = "";
     
-                // Ordenação visual: Itens sem setor no final, mas ordenados por criação
+                // --- ORDENAÇÃO NA TELA DE EDIÇÃO (Apenas cronológica) ---
+                // Isso impede que os itens mudem de lugar ao selecionar o setor
                 const itensArray = Object.values(itens).sort((a,b) => {
-                    const idxA = App.setores.indexOf(a.setor) === -1 ? 999 : App.setores.indexOf(a.setor);
-                    const idxB = App.setores.indexOf(b.setor) === -1 ? 999 : App.setores.indexOf(b.setor);
-                    return idxA - idxB || a.id.localeCompare(b.id);
+                    return a.id.localeCompare(b.id);
                 });
 
                 itensArray.forEach(item => {
